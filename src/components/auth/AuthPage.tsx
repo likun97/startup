@@ -2,9 +2,16 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Oswald } from 'next/font/google'
 import AuthForm from './AuthForm'
 import Link from 'next/link'
 import Image from 'next/image'
+
+const oswald = Oswald({
+  subsets: ['latin'],
+  weight: ['700'],
+  style: ['normal'],
+})
 
 function AuthContent() {
   const searchParams = useSearchParams()
@@ -36,17 +43,17 @@ function AuthContent() {
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2">
               <Image src="/logo.svg" alt="Logo" width={32} height={32} priority />
-              <span className="text-white font-bold text-xl">SaaS Kit Pro</span>
+              <span className={`text-[#FFBE1A] font-bold text-xl ${oswald.className}`}>ConvoLens</span>
             </Link>
 
             {/* Navigation */}
             <nav className="flex items-center space-x-6">
-              <Link href="/features" className="text-white/60 hover:text-white transition-colors">
+              {/* <Link href="/features" className="text-white/60 hover:text-white transition-colors">
                 Features
               </Link>
               <Link href="/docs" className="text-white/60 hover:text-white transition-colors">
                 Documentation
-              </Link>
+              </Link> */}
               <Link 
                 href={view === 'sign-in' ? '/auth?view=sign-up' : '/auth?view=sign-in'} 
                 className="text-[#FFBE1A] hover:text-[#FFBE1A]/80 transition-colors"

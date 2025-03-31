@@ -8,6 +8,7 @@ import Chat from '@/components/dashboard/Chat'
 import { PieComponent } from '@/components/dashboard/chart-pie-label-custom'
 import { SummaryDisplay } from '@/components/dashboard/SummaryDisplay'
 import { DownloadButton } from '@/components/dashboard/DownloadButton'
+import { WordCloudChart } from '@/components/dashboard/WordCloudChart'
 
 
 async function getTask(task_id: string): Promise<Task | null> {
@@ -25,7 +26,7 @@ async function getTask(task_id: string): Promise<Task | null> {
 
   return data
 }
- 
+
 
 interface SummaryData {
   status: string
@@ -34,7 +35,16 @@ interface SummaryData {
 
 async function getSummary(task_id: string): Promise<SummaryData | null> {
   try {
-    const response = await fetch(`http://localhost:5000/api/summary?task_id=${task_id}`)
+    const task = await getTask(task_id)
+    if (!task) {
+      throw new Error('Task not found')
+    }
+
+    const endpoint = task.type === 'User demand research'
+      ? '/api/demand_summary'
+      : '/api/feedback_summary'
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}${endpoint}?task_id=${task_id}`)
     if (!response.ok) {
       throw new Error('Failed to fetch summary')
     }
@@ -85,7 +95,10 @@ export default async function TaskReport({
               <h2 className="text-white/60">Product Portraits</h2>
               <p className="text-white">{task.product_portraits}</p>
             </div>
-            {/* 添加更多任务详情 */}
+            <div>
+              <h2 className="text-white/60">Task Type</h2>
+              <p className="text-white">{task.type}</p>
+            </div>
           </div>
         </div>
         <div>
@@ -95,13 +108,21 @@ export default async function TaskReport({
                 <Label className="text-white/60">Conversation summary</Label>
                 <DownloadButton taskId={resolvedParams.task_id} />
               </div>
-              <SummaryDisplay 
-                taskId={resolvedParams.task_id} 
-                fallback={summary?.summary ? JSON.stringify(summary.summary) : "该任务暂无对话摘要"}
+              <SummaryDisplay
+                summary={summary}
+                loading={false}
+                fallback="该任务暂无对话摘要"
               />
-              <PieComponent />
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <div>
+                  <WordCloudChart />
+                </div>
+                <div>
+                  <PieComponent />
+                </div>
+              </div>
             </div>
-            <div className="bg-white/5 rounded-lg">
+            <div className="bg-white/5 rounded-lg h-[600px]">
               <Chat summary={summary?.summary ? JSON.stringify(summary.summary) : undefined} />
             </div>
           </div>

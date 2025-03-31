@@ -27,17 +27,36 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 import { v4 as uuidv4 } from 'uuid'
 import { group } from "console"
+import { useToast } from "@/hooks/use-toast"
 
 
 
 export function DialogNewTask({ task, mode = 'create' }: { task?: Task, mode?: 'create' | 'edit' }) {
-    const supabase = createClient()
+    const { toast } = useToast()
+    const [isLoading, setIsLoading] = useState(false)
+    // 将 supabase 客户端创建移到 useEffect 外部并使用 useMemo
+    const supabase = React.useMemo(() => createClient(), []);
     const router = useRouter()
     const [open, setOpen] = useState(false)
     // 添加新的状态
     const [users, setUsers] = useState<Array<{ group_id: string; group_name: string }>>([])
     const [products, setProducts] = useState<Array<{ product_id: string; name: string }>>([])
     
+    // 添加对话框打开时的监听
+    React.useEffect(() => {
+        if (open && mode === 'create') {
+            setFormData({
+                task_id: uuidv4(),
+                name: '',
+                type: '' as Task['type'],
+                user_portraits: '',
+                product_portraits: '',
+                status: 'pending',
+                group_id: '',
+                product_id: '',
+            })
+        }
+    }, [open, mode])
     // 添加数据获取函数
     React.useEffect(() => {
         const fetchData = async () => {
@@ -61,7 +80,7 @@ export function DialogNewTask({ task, mode = 'create' }: { task?: Task, mode?: '
         }
 
         fetchData()
-    }, [])
+    }, [supabase])
     const [formData, setFormData] = useState({
         task_id: task?.task_id || uuidv4(),  // 从 id 改为 task_id
         name: task?.name || '',
@@ -74,39 +93,60 @@ export function DialogNewTask({ task, mode = 'create' }: { task?: Task, mode?: '
     })
     
     const handleSubmit = async () => {
+        setIsLoading(true)
         try {
-            // 首先保存到 Supabase
+            // Prepare the data before saving
+            const dataToSave = {
+                ...formData,
+                // For User demand research, we'll set a default value for product_id
+                product_id: formData.type === 'User demand research' ? null : formData.product_id,
+                product_portraits: formData.type === 'User demand research' ? '--' : formData.product_portraits
+            };
+            // Save to Supabase
             if (mode === 'edit' && task) {
                 const { error } = await supabase
                     .from('tasks')
-                    .update(formData)
-                    .eq('task_id', task.task_id)  // 从 id 改为 task_id
+                    .update(dataToSave)
+                    .eq('task_id', task.task_id)
 
                 if (error) throw error
             } else {
                 const { error } = await supabase
                     .from('tasks')
-                    .insert([formData])
+                    .insert([dataToSave])
 
                 if (error) throw error
             }
 
+            toast({
+                title: "Task Created",
+                description: "Waiting for AI processing, this may take a few minutes...",
+            })
+
             // 发送数据到 Flask 后端
-            const response = await fetch('http://localhost:5000/api/jeans-feedback', {
+            const apiUrl = formData.type === 'User demand research' 
+                ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/user_demand`
+                : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/jeans-feedback`;
+                
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     task_id: formData.task_id,
-                    group_id: formData.group_id,
-                    product_id: formData.product_id,
                 }),
             });
 
             if (!response.ok) {
                 throw new Error('Failed to send data to backend');
             }
+
+            toast({
+                title: "Processing Complete",
+                description: "AI analysis has been completed",
+                variant: "default",
+            })
 
             // 清空表单并刷新页面
             setFormData({
@@ -123,6 +163,13 @@ export function DialogNewTask({ task, mode = 'create' }: { task?: Task, mode?: '
             router.refresh()
         } catch (error) {
             console.error('Error saving task:', error)
+            toast({
+                title: "Error",
+                description: "An error occurred while saving the task",
+                variant: "destructive",
+            })
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -165,8 +212,15 @@ export function DialogNewTask({ task, mode = 'create' }: { task?: Task, mode?: '
                     <div className="flex flex-col space-y-1.5">
                         <Label htmlFor="type">Task Type</Label>
                         <Select 
-                            value={formData.type} // 添加这行
-                            onValueChange={(value) => handleInputChange('type', value)}
+                            value={formData.type}
+                            onValueChange={(value) => {
+                                handleInputChange('type', value);
+                                // 当选择 User demand research 时，设置默认值
+                                if (value === 'User demand research') {
+                                    handleInputChange('product_portraits', '--');
+                                    handleInputChange('product_id', '');
+                                }
+                            }}
                         >
                             <SelectTrigger id="type">
                                 <SelectValue placeholder="Select" />
@@ -205,7 +259,7 @@ export function DialogNewTask({ task, mode = 'create' }: { task?: Task, mode?: '
                         </Select>
                     </div>
 
-                    <div className="flex flex-col space-y-1.5">
+                    {formData.type !== 'User demand research' &&(<div className="flex flex-col space-y-1.5">
                         <Label htmlFor="product_portraits">Product Portraits</Label>
                         <Select 
                             value={formData.product_portraits}
@@ -230,10 +284,16 @@ export function DialogNewTask({ task, mode = 'create' }: { task?: Task, mode?: '
                                 ))}
                             </SelectContent>
                         </Select>
-                    </div>
+                    </div>)}
                 </div>
                 <DialogFooter>
-                    <Button type="submit" onClick={handleSubmit}>Save</Button>
+                    <Button 
+                        type="submit" 
+                        onClick={handleSubmit} 
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "处理中..." : "保存"}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

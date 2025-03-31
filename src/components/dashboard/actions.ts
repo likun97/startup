@@ -20,20 +20,14 @@ export async function getCurrentUser() {
   }
   
  
-
-  const { data: userData } = await supabase
-    .from('users')
-    .select('id, email, credits')
-    .eq('id', user.id)
-    .single()
-
-  return userData
+ 
+  return user
 }
 
 
 export async function fetchHealthCheck() {
   try {
-    const response = await fetch('http://localhost:5000/api/health', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/health`, {
       cache: 'no-store'
     });
     return await response.json();

@@ -2,17 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { Oswald } from 'next/font/google'
 import { signOut, getCurrentUser, fetchHealthCheck } from './actions'
 import { Label } from '../ui/label'
 
+const oswald = Oswald({
+  subsets: ['latin'],
+  weight: ['700'],
+  style: ['normal'],
+})
+
 interface User {
   id: string
-  email: string
-  credits: number
+  email: string 
 }
 
 export default function Header() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -20,7 +26,7 @@ export default function Header() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const userData = await getCurrentUser()
+        const userData = await getCurrentUser() // 打印 userData 以检查其值
         if (userData) {
           setUser(userData)
         }
@@ -33,8 +39,7 @@ export default function Header() {
     }
 
     fetchUser()
-  }, [])
-
+  }, [])  
   // Loading state 保持不变
   if (isLoading) {
     return (
@@ -49,26 +54,28 @@ export default function Header() {
     )
   }
 
-  const fetchHealthCheck = async () => {
-    console.log('开始请求健康检查接口...');  // 调试日志
-    try {
-      const response = await fetch('http://localhost:5000/api/health');
-      console.log('收到响应:', response);  // 调试日志
-      const data = await response.json();
-      console.log('解析后的数据:', data);  // 调试日志
-    } catch (error) {
-      console.error('请求出错:', error);
-    }
-  };
+  // const fetchHealthCheck = async () => {
+  //   console.log('开始请求健康检查接口...');  // 调试日志
+  //   try {
+  //     const response = await fetch('http://localhost:5000/api/health');
+  //     console.log('收到响应:', response);  // 调试日志
+  //     const data = await response.json();
+  //     console.log('解析后的数据:', data);  // 调试日志
+  //   } catch (error) {
+  //     console.error('请求出错:', error);
+  //   }
+  // };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#0A0A0A] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link href="/" className="text-white font-bold text-xl">
-              *********************
-            </Link>
+            <div className="flex items-center">
+              <span className={`text-[#FFBE1A] font-bold text-xl tracking-wider ${oswald.className}`}>ConvoLens</span>
+              <span className="mx-2 text-white/40">|</span>
+              <span className="text-white/60 text-sm font-light italic">Illuminating Insights Through Consumer Conversations</span>
+            </div>
           </div>
           
           <div className="flex items-center space-x-4">
@@ -80,7 +87,7 @@ export default function Header() {
             
             <div className="flex items-center space-x-4">
               <div className="text-white/60">
-                Credits: {user?.credits || 0}
+                User: 
               </div>
               <div className="relative">
                 <button
@@ -106,8 +113,8 @@ export default function Header() {
                 {isMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                     <div className="py-1">
-                      <Link
-                        href="/dashboard"
+                      {/* <Link
+                        href="/dashboard/tasks"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -121,7 +128,7 @@ export default function Header() {
                           fetchHealthCheck();}}
                       >
                         Tasks
-                      </Label>
+                      </Label> */}
     
                       <button
                         onClick={() => {
